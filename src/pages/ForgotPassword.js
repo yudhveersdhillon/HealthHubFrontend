@@ -3,24 +3,35 @@ import { useForm } from 'react-hook-form';
 import * as yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
 import api from '../api';
-import { Box, Button, Input, FormControl, FormErrorMessage, Heading, Text } from '@chakra-ui/react';
+import { Box, Button, Input, FormControl, FormErrorMessage, Heading, Text, useToast } from '@chakra-ui/react';
+import { forgotPassword, toast } from '../store/authSlice';
+import { useDispatch, useSelector } from 'react-redux';
 
 const forgotPasswordSchema = yup.object().shape({
   email: yup.string().email('Invalid email').required('Email is required'),
 });
 
 const ForgotPassword = () => {
+  const toaster=useToast();
+  const dispatch = useDispatch();
   const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: yupResolver(forgotPasswordSchema),
   });
-  const [apiMessage, setApiMessage] = React.useState('');
-
+  const authState = useSelector((state) => state.auth);
+  const { status } = authState;
   const onSubmit = async (data) => {
     try {
-      await api.post('/forgot-password', { email: data.email });
-      setApiMessage('Password reset link sent to your email.');
+      const resultAction = await dispatch(
+        forgotPassword({ email: data.email })
+      );
+
+      if (forgotPassword.fulfilled.match(resultAction)) {
+        toast(toaster,'Password reset link sent to your email.','success');
+      } else {
+        toast(toaster,resultAction.payload || 'Failed to send reset link','error');
+      }
     } catch (error) {
-      setApiMessage('Failed to send reset link');
+      toast(toaster,error.message || 'Failed to send reset link',error);
     }
   };
 
@@ -35,10 +46,7 @@ const ForgotPassword = () => {
             <Input placeholder="Email" {...register('email')} />
             <FormErrorMessage>{errors.email?.message}</FormErrorMessage>
           </FormControl>
-
-          {apiMessage && <Text color="green.500" mt={2}>{apiMessage}</Text>}
-
-          <Button type="submit" colorScheme="blue" w="full" mt={6}>
+           <Button type="submit" colorScheme="blue" w="full" mt={6} disabled={status==='loading'}>
             Submit
           </Button>
         </form>

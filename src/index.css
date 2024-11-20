@@ -14,3 +14,10 @@ code {
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+aside a{
+  margin-bottom: 10px !important;
+}
+aside a.active,aside a:hover{
+  background: #2b6cb0 !important;
+  border-radius: 4px !important;
+}

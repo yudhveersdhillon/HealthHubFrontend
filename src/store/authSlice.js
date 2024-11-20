@@ -1,43 +1,73 @@
 // src/store/authSlice.js
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axiosInstance from '../utils/axios';
-
+export const toast=(toaster,message,status)=>{
+  toaster({
+    title: message,
+    description:'',
+    status: status,
+    position:'top-right',
+    duration: 5000,
+    isClosable: true,
+  });
+}
 export const login = createAsyncThunk('auth/login', async (credentials, { rejectWithValue }) => {
   try {
-    const response = await axiosInstance.post('/api/auth/login', credentials);
-    return response.data;  // Return the response data
+    const role= localStorage.getItem('userRole') || null
+    const response = await axiosInstance.post(role==='admin'?'admin/login':(role==='doctor'?'doctor/login':'staff/login'), credentials);
+    return response.data.response.data; 
   } catch (error) {
-    return rejectWithValue(error.response?.data || 'An error occurred');
+    return rejectWithValue(error.response?.data?.response?.message || 'An error occurred');
   }
 });
 
 export const signup = createAsyncThunk('auth/signup', async (credentials, { rejectWithValue }) => {
   try {
-    const response = await axiosInstance.post('/api/auth/signup', credentials);
-    return response.data;
+    const response = await axiosInstance.post('admin/register', credentials);
+    return response.data.response;
   } catch (error) {
-    return rejectWithValue(error.response?.data || 'An error occurred');
+    return rejectWithValue(error.response?.data?.response?.message || 'An error occurred');
   }
 });
 
 export const forgotPassword = createAsyncThunk('auth/forgotPassword', async (email, { rejectWithValue }) => {
   try {
-    const response = await axiosInstance.post('/api/auth/forgot-password', { email });
-    return response.data;
+    const response = await axiosInstance.post('/admin/forgot-password', { email });
+    return response.data.response.data; ;
   } catch (error) {
-    return rejectWithValue(error.response?.data || 'An error occurred');
+    return rejectWithValue(error.response?.data?.response?.message || 'An error occurred');
   }
 });
 
 export const resetPassword = createAsyncThunk('auth/resetPassword', async (data, { rejectWithValue }) => {
   try {
-    const response = await axiosInstance.post('/api/auth/reset-password', data);
-    return response.data;
+    const response = await axiosInstance.post('/admin/reset-password', data);
+    return response.data.response.data;
   } catch (error) {
-    return rejectWithValue(error.response?.data || 'An error occurred');
+    return rejectWithValue(error.response?.data?.response?.message || 'An error occurred');
   }
 });
-
+export const changePassword = createAsyncThunk('auth/changePassword', async (data, { rejectWithValue }) => {
+  try {
+    const response = await axiosInstance.post('/admin/change-password', data);
+    return response.data.response.data;
+  } catch (error) {
+    return rejectWithValue(error.response?.data?.response?.message || 'An error occurred');
+  }
+});
+export const updateProfile = createAsyncThunk(
+  "auth/updateProfile",
+  async (data, { rejectWithValue }) => {
+    try {
+      const user = JSON.parse(localStorage.getItem('user')) || null; 
+    
+      const response = await axiosInstance.put('/admin/update/'+user?._id, data);
+      return response.data.response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.response?.message || 'An error occurred');
+    }
+  }
+);
 const authSlice = createSlice({
   name: 'auth',
   initialState: {
@@ -54,9 +84,7 @@ const authSlice = createSlice({
     },
     logout: (state) => {
       state.user = null;
-      state.role = null;
       localStorage.removeItem('user');
-      localStorage.removeItem('userRole');
     },
     resetAuth: (state) => {
       state.user = null;
@@ -69,6 +97,7 @@ const authSlice = createSlice({
       .addCase(login.fulfilled, (state, action) => {
         state.status = 'succeeded';
         state.user = action.payload;
+        localStorage.setItem('user', JSON.stringify(action.payload));
       })
       .addCase(login.rejected, (state, action) => {
         state.status = 'failed';
@@ -78,7 +107,6 @@ const authSlice = createSlice({
       .addCase(signup.fulfilled, (state, action) => {
         state.status = 'succeeded';
         state.user = action.payload;
-        localStorage.setItem('user', action.payload);
       })
       .addCase(signup.rejected, (state, action) => {
         state.status = 'failed';
@@ -97,6 +125,24 @@ const authSlice = createSlice({
         state.status = 'succeeded';
       })
       .addCase(resetPassword.rejected, (state, action) => {
+        state.status = 'failed';
+        state.error = action.payload;
+      })
+      .addCase(changePassword.pending, (state) => { state.status = 'loading'; })
+      .addCase(changePassword.fulfilled, (state, action) => {
+        state.status = 'succeeded';
+      })
+      .addCase(changePassword.rejected, (state, action) => {
+        state.status = 'failed';
+        state.error = action.payload;
+      })
+      .addCase(updateProfile.pending, (state) => { state.status = 'loading'; })
+      .addCase(updateProfile.fulfilled, (state, action) => {
+        state.status = 'succeeded';
+        state.user={...state?.user,...action?.payload};
+        localStorage.setItem('user', JSON.stringify({...state?.user,...action?.payload}));
+      })
+      .addCase(updateProfile.rejected, (state, action) => {
         state.status = 'failed';
         state.error = action.payload;
       });

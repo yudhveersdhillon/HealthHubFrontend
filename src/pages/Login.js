@@ -1,11 +1,10 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { useDispatch, useSelector } from 'react-redux';
-import { login } from '../store/authSlice';
+import { login, toast } from '../store/authSlice';
 import { Link, useNavigate } from 'react-router-dom';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import api from '../api';
 import {
   Box,
   Button,
@@ -13,7 +12,7 @@ import {
   FormControl,
   FormErrorMessage,
   Heading,
-  Text,
+  useToast,
 } from '@chakra-ui/react';
 
 const loginSchema = yup.object().shape({
@@ -22,21 +21,29 @@ const loginSchema = yup.object().shape({
 });
 
 const Login = () => {
+  const toaster=useToast();
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const role = useSelector((state) => state.auth.role);
   const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: yupResolver(loginSchema),
   });
-  const [apiError, setApiError] = React.useState('');
-
+  const authState = useSelector((state) => state.auth);
+  const { status } = authState;
   const onSubmit = async (data) => {
     try {
-      const response = await api.post('/login', data); // Adjust the endpoint as needed
-      dispatch(login(response.data));
-      navigate('/');
+      const resultAction = await dispatch(
+        login({ email: data.email, password: data.password })
+      );
+
+      if (login.fulfilled.match(resultAction)) {
+        toast(toaster,'Successfully login user.','success');
+        navigate('/');
+      } else {
+        toast(toaster,resultAction.payload || 'Login failed','error');
+      }
     } catch (error) {
-      setApiError(error.response?.data?.message || 'Login failed');
+      toast(toaster,error.message || 'An unexpected error occurred','error');
     }
   };
 
@@ -57,8 +64,7 @@ const Login = () => {
             <FormErrorMessage>{errors.password?.message}</FormErrorMessage>
           </FormControl>
 
-          {apiError && <Text color="red.500" mt={2}>{apiError}</Text>}
-          <Button type="submit" colorScheme="blue" w="full" mt={6}>
+           <Button type="submit" colorScheme="blue" w="full" mt={6} disabled={status==='loading'}>
             Login
           </Button>
 
