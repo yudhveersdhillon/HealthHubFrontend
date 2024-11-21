@@ -8,11 +8,18 @@ import Dashboard from './pages/Dashboard';
 import Signup from './pages/Signup';
 import RoleSelection from './pages/RoleSelection';
 import { resetAuth, setRole } from './store/authSlice';
+import Loader from './loader';
+import Layout from './layout';
+import Profile from './pages/profile';
+import Doctors from './pages/doctors';
+import Staff from './pages/staff';
 
 const AppRoutes = () => {
   const roles = useSelector((state) => state.auth.roles);
   const user = useSelector((state) => state.auth.user);
   const role = useSelector((state) => state.auth.role);
+  const authState = useSelector((state) => state.auth);
+  const { status } = authState;
   const dispatch = useDispatch();
 
   useEffect(() => {
@@ -48,7 +55,7 @@ const AppRoutes = () => {
     return role ? children : <Navigate to="/user-role" />;
   };
 
-  return (
+  return (<> {status==='loading' && <Loader />}
     <Router>
       <Routes>
         <Route path="/user-role" element={<RoleSelection />} />
@@ -60,9 +67,13 @@ const AppRoutes = () => {
         <Route path="/reset-password" element={<ProtectedRoleRoute><ResetPassword /></ProtectedRoleRoute>} />
 
         {/* Protected Route for Authenticated Users */}
-        <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>} />
+        <Route path="/doctors" element={<ProtectedRoute><Layout><Doctors /></Layout></ProtectedRoute>} />
+        <Route path="/staff" element={<ProtectedRoute><Layout><Staff /></Layout></ProtectedRoute>} />
       </Routes>
     </Router>
+    </>
   );
 };
 

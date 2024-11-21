@@ -12,7 +12,10 @@ import {
   FormErrorMessage,
   Heading,
   Text,
+  useToast
 } from '@chakra-ui/react';
+import { resetPassword, toast } from '../store/authSlice';
+import { useDispatch, useSelector } from 'react-redux';
 
 const resetPasswordSchema = yup.object().shape({
   password: yup.string().min(6, 'Minimum 6 characters').required('Password is required'),
@@ -22,27 +25,32 @@ const resetPasswordSchema = yup.object().shape({
 });
 
 const ResetPassword = () => {
+  const toaster = useToast();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const token = searchParams.get('token'); // Assuming the token is provided in the URL as a query parameter
+  const token = searchParams.get('token');
   const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: yupResolver(resetPasswordSchema),
   });
-  const [apiMessage, setApiMessage] = React.useState('');
-
+  const dispatch = useDispatch();
+  const authState = useSelector((state) => state.auth);
+  const { status } = authState;
   const onSubmit = async (data) => {
     try {
-      await api.post('/reset-password', {
-        token,
-        password: data.password,
-      });
-      setApiMessage('Password reset successful! Redirecting to login...');
-      setTimeout(() => navigate('/login'), 3000);
+      const resultAction = await dispatch(
+        resetPassword({ token, password: data.password})
+      );
+
+      if (resetPassword.fulfilled.match(resultAction)) {
+        toast(toaster,'Password reset successful! Redirecting to login...','success');
+        navigate('/login');
+      } else {
+        toast(toaster,(resultAction.payload || 'Signup failed'),'error');
+      }
     } catch (error) {
-      setApiMessage(error.response?.data?.message || 'Failed to reset password');
+      toast(toaster,(error.message || 'An unexpected error occurred'),'error');
     }
   };
-
   return (
     <Box className="flex flex-col items-center justify-center h-screen bg-gray-100 p-4">
       <Box className="w-full max-w-md bg-white p-8 rounded-lg shadow-md">
@@ -60,9 +68,7 @@ const ResetPassword = () => {
             <FormErrorMessage>{errors.confirmPassword?.message}</FormErrorMessage>
           </FormControl>
 
-          {apiMessage && <Text color={apiMessage.includes('successful') ? 'green.500' : 'red.500'} mt={2}>{apiMessage}</Text>}
-
-          <Button type="submit" colorScheme="blue" w="full" mt={6}>
+          <Button type="submit" colorScheme="blue" w="full" mt={6} disabled={status==='loading'}>
             Reset Password
           </Button>
         </form>

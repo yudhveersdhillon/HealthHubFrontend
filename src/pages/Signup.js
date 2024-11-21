@@ -3,9 +3,9 @@ import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import * as yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
-import api from '../api';
-import { Box, Button, Input, FormControl, FormErrorMessage, Heading, Text } from '@chakra-ui/react';
-
+import { Box, Button, Input, FormControl, FormErrorMessage, Heading, Text, useToast } from '@chakra-ui/react';
+import { useDispatch, useSelector } from 'react-redux';
+import { signup, toast } from '../store/authSlice';
 const signupSchema = yup.object().shape({
   email: yup.string().email('Invalid email').required('Email is required'),
   password: yup.string().min(6, 'Minimum 6 characters').required('Password is required'),
@@ -15,18 +15,30 @@ const signupSchema = yup.object().shape({
 });
 
 const Signup = () => {
-  const navigate = useNavigate();
+  const toaster=useToast();
   const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: yupResolver(signupSchema),
   });
-  const [apiError, setApiError] = React.useState('');
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
 
+  // Access status or error from the Redux state
+  const authState = useSelector((state) => state.auth);
+  const { status } = authState;
   const onSubmit = async (data) => {
     try {
-      await api.post('/signup', { email: data.email, password: data.password });
-      navigate('/login');
+      const resultAction = await dispatch(
+        signup({ email: data.email, password: data.password })
+      );
+
+      if (signup.fulfilled.match(resultAction)) {
+        toast(toaster,'Successfully signup!','success');
+        navigate('/login');
+      } else {
+        toast(toaster,resultAction.payload || 'Signup failed','error');
+      }
     } catch (error) {
-      setApiError(error.response?.data?.message || 'Signup failed');
+      toast(toaster,error.message || 'An unexpected error occurred','error');
     }
   };
 
@@ -52,9 +64,7 @@ const Signup = () => {
             <FormErrorMessage>{errors.confirmPassword?.message}</FormErrorMessage>
           </FormControl>
 
-          {apiError && <Text color="red.500" mt={2}>{apiError}</Text>}
-
-          <Button type="submit" colorScheme="blue" w="full" mt={6}>
+           <Button type="submit" colorScheme="blue" w="full" mt={6} disabled={status==='loading'}>
             Sign Up
           </Button>
 

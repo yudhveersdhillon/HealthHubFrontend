@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { Box, Text} from '@chakra-ui/react';
 
-const Dashboard = () => {
+const Staff = () => {
   return (
     <Box>
-        <Text fontSize="2xl">Welcome to the Dashboard</Text>
+        <Text fontSize="2xl">Staff</Text>
     </Box>
   );
 };
 
-export default Dashboard;
+export default Staff;
